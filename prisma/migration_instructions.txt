@@ -1,0 +1,46 @@
+Migration plan: Migrate Plan -> Package (type=PLAN)
+
+Overview
+- Goal: convert existing Plan model into Package entries with type = "PLAN", update related tables (mfe_access, user_plans, subscriptions) and adapt foreign keys.
+- Approach: run a carefully-ordered SQL script in a transaction on a maintenance window; verify data integrity; then update application code and tests.
+
+Pre-migration checklist
+1. Backup the database: pg_dump -Fc -f backup_before_plan_to_package.dump $DATABASE_URL
+2. Stop write traffic to the DB (put the app in maintenance mode) to avoid concurrent writes.
+3. Ensure a DB restore test exists and that you can rollback if needed.
+4. Run the migration in a staging environment first.
+
+What the migration does
+1. Create Package rows for every Plan row, preserving id to keep relations stable.
+2. Convert mfe_access.planId -> mfe_access.packageId and recreate FK.
+3. Convert user_plans.planId -> user_plans.packageId and recreate FK.
+4. Convert subscriptions.type='plan' to subscriptions.type='package'.
+5. (Optional) Drop plans table after verification.
+
+Scripts included
+- migrate-plan-to-package.sql: SQL script that performs the migration. Review and adjust constraint/index names if your DB has different names.
+
+How to run
+1. Export DATABASE_URL to point to your Postgres instance used by system-service.
+2. Run locally with psql:
+   psql "$DATABASE_URL" -f apps/system-service/prisma/migrate-plan-to-package.sql
+
+Validation steps (after running)
+1. Verify counts: SELECT COUNT(*) FROM plans; SELECT COUNT(*) FROM packages WHERE type='PLAN';
+2. Verify no NULLs: SELECT * FROM mfe_access WHERE "packageId" IS NULL OR "packageId" = '';
+3. Verify subscriptions: SELECT COUNT(*) FROM subscriptions WHERE type='plan'; (should be 0)
+4. Spot-check a couple of users and plans to ensure access mappings moved correctly.
+
+Rollback plan
+- If something goes wrong: restore from the backup made before migration:
+  pg_restore -d $DATABASE_URL backup_before_plan_to_package.dump
+
+Post-migration
+1. Update Prisma schema (already updated in codebase) and run Prisma generate.
+2. Implement Prisma repository methods switching Plan->Package logic.
+3. Update seeds and admin API.
+4. Remove compatibility endpoints once clients migrated.
+
+Notes
+- The SQL script attempts to preserve ids to minimize code changes. If you're using UUID generation defaults that differ between DBs, adapt accordingly.
+- Test migrations in staging first.

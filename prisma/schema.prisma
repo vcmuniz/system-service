@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PackageType {
+  STANDARD
+  PLAN
+}
+
+model Package {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  planId          String?
+  plan            Package? @relation("PlanPackages", fields: [planId], references: [id], onDelete: Cascade)
+  packages        Package[] @relation("PlanPackages")
+  type            PackageType @default(STANDARD)
+  tier            String?
+  maxPackages     Int?
+  features        Json     @default("[]")
+  metadata        Json     @default("{}")
+  priceCents      Int      @default(0)
+  currency        String   @default("USD")
+  isFree          Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  microfrontendId String?
+  mfe             Microfrontend? @relation(fields: [microfrontendId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userPackages    UserPackage[]
+  mfeAccess       MicrofrontendAccess[]
+
+  @@map("packages")
+  @@unique([name, planId])
+  @@index([type])
+}
+
+model Microfrontend {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  imageUrl         String?
+  remoteUrl        String
+  version          String?
+  permissions      Json     @default("[]")
+  order            Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  mfeAccess        MicrofrontendAccess[]
+
+  @@map("microfrontends")
+  @@index([isActive])
+}
+
+model UserPackage {
+  id         String   @id @default(uuid())
+  userId     String
+  packageId  String
+  package    Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  startsAt   DateTime
+  expiresAt  DateTime?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, packageId])
+  @@map("user_plans")
+}
+
+model MicrofrontendAccess {
+  id              String   @id @default(uuid())
+  packageId       String
+  package         Package  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  microfrontendId String
+  mfe             Microfrontend @relation(fields: [microfrontendId], references: [id], onDelete: Cascade)
+  requiredFeatures Json     @default("[]")
+
+  @@unique([packageId, microfrontendId])
+  @@map("mfe_access")
+}
+
+model Subscription {
+  id String @id @default(uuid())
+  userId String
+  type String // "package" (plans are now packages with type=PLAN)
+  targetId String // packageId
+  startsAt DateTime
+  expiresAt DateTime?
+  cycle String // "monthly" | "6months" | "yearly"
+  priceCents Int
+  currency String @default("USD")
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("subscriptions")
+  @@index([userId])
+}
