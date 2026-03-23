@@ -6,27 +6,29 @@ import { EnvironmentConfig } from '../config/environment.config';
 
 export class Container {
   private static instance: Container;
-  public readonly prisma: PrismaClient;
-  public readonly configRepository: PrismaConfigRepository;
-  public readonly cacheService: RedisCache;
-  public readonly getUserConfigUseCase: GetUserConfigUseCase;
+  public prisma: PrismaClient | null = null;
+  public configRepository: PrismaConfigRepository | null = null;
+  public cacheService: RedisCache;
+  public getUserConfigUseCase: GetUserConfigUseCase | null = null;
 
   private constructor() {
-    this.prisma = new PrismaClient({ datasources: { db: { url: EnvironmentConfig.DATABASE_URL } } });
+    // Do not instantiate PrismaClient at module import time to avoid build-time prisma generation issues.
     this.cacheService = new RedisCache(EnvironmentConfig.REDIS_URL);
-    this.configRepository = new PrismaConfigRepository(this.prisma);
-
-    this.getUserConfigUseCase = new GetUserConfigUseCase(this.configRepository, this.cacheService);
   }
 
   static getInstance(): Container { if (!Container.instance) Container.instance = new Container(); return Container.instance; }
 
   async initialize(): Promise<void> {
-    try { await this.prisma.$connect(); } catch (err) { console.warn('Prisma connect failed:', err); }
+    try {
+      this.prisma = new PrismaClient({ datasources: { db: { url: EnvironmentConfig.DATABASE_URL } } });
+      this.configRepository = new PrismaConfigRepository(this.prisma);
+      this.getUserConfigUseCase = new GetUserConfigUseCase(this.configRepository, this.cacheService);
+      await this.prisma.$connect();
+    } catch (err) { console.warn('Prisma connect/initialize failed:', err); }
   }
 
   async shutdown(): Promise<void> {
     try { await this.cacheService.disconnect(); } catch {}
-    try { await this.prisma.$disconnect(); } catch {}
+    try { if (this.prisma) await this.prisma.$disconnect(); } catch {}
   }
 }
