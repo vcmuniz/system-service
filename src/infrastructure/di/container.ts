@@ -5,7 +5,7 @@ import { EnvironmentConfig } from '../config/environment.config';
 
 export class Container {
   private static instance: Container;
-  public prisma: PrismaClient | null = null;
+  public prisma: any = null;
   public configRepository: PrismaConfigRepository | null = null;
   public cacheService: RedisCache;
   public getUserConfigUseCase: GetUserConfigUseCase | null = null;
@@ -19,13 +19,16 @@ export class Container {
 
   async initialize(): Promise<void> {
     try {
-      try:
-      const PrismaClient = require('@prisma/client').PrismaClient;
-      this.prisma = new PrismaClient({ datasources: { db: { url: EnvironmentConfig.DATABASE_URL } } });
-    } catch (err) { console.warn('Prisma client load failed:', err); }
-      this.configRepository = new PrismaConfigRepository(this.prisma);
-      this.getUserConfigUseCase = new GetUserConfigUseCase(this.configRepository, this.cacheService);
-      await this.prisma.$connect();
+      try {
+        const PrismaClient = require('@prisma/client').PrismaClient;
+        this.prisma = new PrismaClient({ datasources: { db: { url: EnvironmentConfig.DATABASE_URL } } });
+      } catch (err) { console.warn('Prisma client load failed:', err); }
+
+      if (this.prisma) {
+        this.configRepository = new PrismaConfigRepository(this.prisma);
+        this.getUserConfigUseCase = new GetUserConfigUseCase(this.configRepository, this.cacheService);
+        try { await this.prisma.$connect(); } catch (err) { console.warn('Prisma connect failed:', err); }
+      }
     } catch (err) { console.warn('Prisma connect/initialize failed:', err); }
   }
 
