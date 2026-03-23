@@ -1,0 +1,28 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "System Service API",
+    "version": "1.0.0",
+    "description": "Minimal OpenAPI spec for system-service (health + basic routes)"
+  },
+  "servers": [
+    { "url": "/system" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Service health",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "example": { "status": "ok", "service": "system-service" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
