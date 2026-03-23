@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client';
 import { PrismaConfigRepository } from '../adapters/persistence/prisma/PrismaConfigRepository';
 import { RedisCache } from '../adapters/cache/RedisCache';
 import { GetUserConfigUseCase } from '../../application/use-cases/GetUserConfig.usecase';
@@ -20,7 +19,10 @@ export class Container {
 
   async initialize(): Promise<void> {
     try {
+      try:
+      const PrismaClient = require('@prisma/client').PrismaClient;
       this.prisma = new PrismaClient({ datasources: { db: { url: EnvironmentConfig.DATABASE_URL } } });
+    } catch (err) { console.warn('Prisma client load failed:', err); }
       this.configRepository = new PrismaConfigRepository(this.prisma);
       this.getUserConfigUseCase = new GetUserConfigUseCase(this.configRepository, this.cacheService);
       await this.prisma.$connect();
