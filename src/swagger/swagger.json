@@ -1,28 +1,19 @@
 {
   "openapi": "3.0.0",
-  "info": {
-    "title": "System Service API",
-    "version": "1.0.0",
-    "description": "Minimal OpenAPI spec for system-service (health + basic routes)"
-  },
-  "servers": [
-    { "url": "/system" }
-  ],
+  "info": { "title": "System Service API", "version": "1.0.0", "description": "System service routes (basic)" },
+  "servers": [{ "url": "/system" }],
   "paths": {
-    "/health": {
-      "get": {
-        "summary": "Service health",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "example": { "status": "ok", "service": "system-service" }
-              }
-            }
-          }
-        }
-      }
-    }
+    "/health": { "get": { "summary": "Health" , "responses": {"200": {"description": "OK"}} } },
+    "/bootstrap": { "get": { "summary": "Bootstrap data", "responses": {"200": {"description": "OK"}} } },
+    "/packages": { "get": { "summary": "List packages", "responses": {"200": {"description": "OK"}} } },
+    "/plans": { "get": { "summary": "List plans", "responses": {"200": {"description": "OK"}} } },
+    "/subscriptions": { "post": { "summary": "Create subscription", "responses": {"201": {"description": "Created"}, "400": {"description": "Bad request"}} } },
+
+    "/admin/plans": { "post": { "summary": "Admin create plan", "responses": {"201": {"description": "Created"}} } },
+    "/admin/packages": {
+      "get": { "summary": "Admin list packages", "responses": {"200": {"description": "OK"}} },
+      "post": { "summary": "Admin create package", "responses": {"201": {"description": "Created"}} }
+    },
+    "/admin/microfrontends": { "post": { "summary": "Create microfrontend", "responses": {"201": {"description": "Created"}} } }
   }
 }
